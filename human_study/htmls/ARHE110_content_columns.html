@@ -1,0 +1,109 @@
+<table class="table">
+    <tr>
+        <th style="width: 33%">
+            <!-- the left column contains the buggy code -->
+            <h2>Original Code</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the middle column contains the patch -->
+            <h2>Automatically Suggested Patch</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the right column contains the explanation for the patch -->
+            <h2 id="expl_header">Explanation</h2>
+        </th>
+    </tr>
+    <tr>
+        <td>
+            <!-- the left column contains the buggy code -->
+            <div id="buggy_code_container">
+                <!-- placeholder Python function highlighted with highlight.js -->
+                <pre><code class="python" id="buggy_code"># Consider the following function and test.
+1 
+2 def choose_num(x, y):
+3     """This function takes two positive numbers x and y and returns the
+4     biggest even integer number that is in the range [x, y] inclusive. If 
+5     there's no such number, then the function should return -1.
+6 
+7     For example:
+8     choose_num(12, 15) = 14
+9     choose_num(13, 12) = -1
+10     """
+11     if x >= y:
+12         return -1
+13     if y % 2 == 0:
+14         return y
+15     if x == y:
+16         return -1
+17     return y - 1
+18 assert choose_num(546, 546) == 546, choose_num(546, 546)</code></pre>
+
+The test fails with the following error:
+
+<pre><code>Traceback (most recent call last):
+  File "/Users/sungmin/Documents/work/humaneval-mutator/asd/debugging.py", line 18, in ...
+    assert choose_num(546, 546) == 546, choose_num(546, 546)
+AssertionError: -1</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the middle column contains the patch -->
+            <div id="patch_container">
+                <!-- placeholder diff file -->
+                <pre><code id="patch" class="language-diff">--- func_def.py
++++ func_def.py
+@@ -1,8 +1,8 @@
+     choose_num(12, 15) = 14
+     choose_num(13, 12) = -1
+     """
+-    if x >= y:
++    if x > y:
+         return -1
+     if y % 2 == 0:
+         return y</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the right column contains the explanation for the patch -->
+            <div id="explanation">
+                <!-- now we show each of the three steps until successful repair. -->
+                <!-- step 1 foldable box -->
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_1" class="expl_header" onclick="toggleFold('expl_details_1')" style="background-color: lightgreen;">
+                        <h3>Step 1: <code>x >= y</code> on line 11 of is intended to check if x is greater than y, but is returning -1 when x is equal to y. (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_1" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the function is supposed to return the biggest even integer number that is in the range [x, y] inclusive, the function is returning -1 when it should return x. Specifically, I think it is because `x >= y` on line 11 of method `choose_num` is intended to check if x is greater than y, but is returning -1 when x is equal to y.</li>
+                            <li>Prediction: When I stop the debugger at line 11, <code>x == y</code> will be true.</li>
+                            <li>Experiment: <code>b debugging.py:11 ;; c ;; p x == y</code></li>
+                            <li>Observation: <code>True</code></li>
+                            <li>Conclusion: The hypothesis is supported.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_2" class="expl_header" onclick="toggleFold('expl_details_2')" style="background-color: lightgreen;">
+                        <h3>Step 2: Changing the code by changing <code>x >= y</code> to <code>x > y</code> may fix the code. (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_2" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the previous hypothesis was supported, I think changing the code by changing <code>x >= y</code> to <code>x > y</code> may fix the code.</li>
+                            <li>Prediction: If I change <code>x >= y</code> to <code>x > y</code>, the test will pass.</li>
+                            <li>Experiment: <code>REPLACE(11, "x >= y", "x > y") AND RUN</code></li>
+                            <li>Observation: <code>[No exception triggered]</code></li>
+                            <li>Conclusion: The hypothesis is supported. <code>&lt;DEBUGGING DONE&gt;</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+<script>hljs.highlightAll();</script>

@@ -1,0 +1,124 @@
+<table class="table">
+    <tr>
+        <th style="width: 33%">
+            <!-- the left column contains the buggy code -->
+            <h2>Original Code</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the middle column contains the patch -->
+            <h2>Automatically Suggested Patch</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the right column contains the explanation for the patch -->
+            <h2 id="expl_header">Explanation</h2>
+        </th>
+    </tr>
+    <tr>
+        <td>
+            <!-- the left column contains the buggy code -->
+            <div id="buggy_code_container">
+                <!-- placeholder Python function highlighted with highlight.js -->
+                <pre><code class="python" id="buggy_code"># Consider the following function and test.
+1 
+2 def by_length(arr):
+3     """
+4     Given an array of integers, sort the integers that are between 1 and 9 inclusive,
+5     reverse the resulting array, and then replace each digit by its corresponding name from
+6     "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine".
+7 
+8     For example:
+9       arr = [2, 1, 1, 4, 5, 8, 2, 3]   
+10             -> sort arr -> [1, 1, 2, 2, 3, 4, 5, 8] 
+11             -> reverse arr -> [8, 5, 4, 3, 2, 2, 1, 1]
+12       return ["Eight", "Five", "Four", "Three", "Two", "Two", "One", "One"]
+13     
+14       If the array is empty, return an empty array:
+15       arr = []
+16       return []
+17     
+18       If the array has any strange number ignore it:
+19       arr = [1, -1 , 55] 
+20             -> sort arr -> [-1, 1, 55]
+21             -> reverse arr -> [55, 1, -1]
+22       return = ['One']
+23     """
+24     dic = {1: 'One', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'five', 6: 'Six', 7: 'Seven', 8: 'Eight', 9: 'Nine'}
+25     sorted_arr = sorted(arr, reverse=True)
+26     new_arr = []
+27     for var in sorted_arr:
+28         try:
+29             new_arr.append(dic[var])
+30         except:
+31             pass
+32     return new_arr
+33 assert by_length([2, 1, 1, 4, 5, 8, 2, 3]) == ['Eight', 'Five', 'Four', 'Three', 'Two', 'Two', 'One', 'One'], by_length([2, 1, 1, 4, 5, 8, 2, 3])</code></pre>
+
+The test fails with the following error:
+
+<pre><code>Traceback (most recent call last):
+  File "/Users/sungmin/Documents/work/humaneval-mutator/asd/debugging.py", line 33, in ...
+    assert by_length([2, 1, 1, 4, 5, 8, 2, 3]) == ['Eight', 'Five', 'Four', 'Three', 'Two', 'Two', 'One', 'One'], by_length([2, 1, 1, 4, 5, 8, 2, 3])
+AssertionError: ['Eight', 'five', 'Four', 'Three', 'Two', 'Two', 'One', 'One']</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the middle column contains the patch -->
+            <div id="patch_container">
+                <!-- placeholder diff file -->
+                <pre><code id="patch" class="language-diff">--- func_def.py
++++ func_def.py
+@@ -1,21 +1,21 @@
+             -> reverse arr -> [55, 1, -1]
+       return = ['One']
+     """
+-    dic = {1: 'One', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'five', 6: 'Six', 7: 'Seven', 8: 'Eight', 9: 'Nine'}:
++    dic = {1: 'One', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five', 6: 'Six', 7: 'Seven', 8: 'Eight', 9: 'Nine'}:
+     sorted_arr = sorted(arr, reverse=True)
+     new_arr = []
+     for var in sorted_arr:</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the right column contains the explanation for the patch -->
+            <div id="explanation">
+                <!-- now we show each of the three steps until successful repair. -->
+                <!-- step 1 foldable box -->
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_1" class="expl_header" onclick="toggleFold('expl_details_1')" style="background-color: lightcoral;">
+                        <h3>Step 1: <code>dic[var]</code> on line 29 is intended to return "Five", but is returning "five". (❌)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_1" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the function is supposed to replace each digit by its corresponding name from "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", the method is returning the wrong name for the digit 5. Specifically, I think it is because <code>dic[var]</code> on line 29 of method <code>by_length</code> is intended to return "Five", but is returning "five".</li>
+                            <li>Prediction: When I stop the debugger at line 29, <code>dic[var] == "five"</code> will be true.</li>
+                            <li>Experiment: <code>b debugging.py:29 ;; c ;; p dic[var]</code></li>
+                            <li>Observation: <code>At each loop execution, the expression was: ['Eight', 'five', 'Four', 'Three', 'Two', 'Two', 'One', 'One']</code></li>
+                            <li>Conclusion: The hypothesis is rejected.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_2" class="expl_header" onclick="toggleFold('expl_details_2')" style="background-color: lightgreen;">
+                        <h3>Step 2: <code>dic = ...</code> on line 24 should do "Five", but is doing "five" (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_2" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the previous hypothesis was rejected, we now know <code>dic[var]</code> on line 29 of method <code>by_length</code> is likely not the culprit. Looking elsewhere, perhaps <code>dic = {1: 'One', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'five', 6: 'Six', 7: 'Seven', 8: 'Eight', 9: 'Nine'}</code> on line 24 of <code>by_length</code> should do "Five", but is doing "five".</li>
+                            <li>Prediction: If I change <code>dic = {1: 'One', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five', 6: 'Six', 7: 'Seven', 8: 'Eight', 9: 'Nine'}</code>, the test will pass.</li>
+                            <li>Experiment: <code>REPLACE(24, "5: 'five',", "5: 'Five',") AND RUN</code></li>
+                            <li>Observation: <code>[No exception triggered]</code></li>
+                            <li>Conclusion: The hypothesis is supported. <code>&lt;DEBUGGING DONE&gt;</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+<script>hljs.highlightAll();</script>

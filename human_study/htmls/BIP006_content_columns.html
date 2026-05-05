@@ -1,0 +1,155 @@
+<table class="table">
+    <tr>
+        <th style="width: 33%">
+            <!-- the left column contains the buggy code -->
+            <h2>Original Code</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the middle column contains the patch -->
+            <h2>Automatically Suggested Patch</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the right column contains the explanation for the patch -->
+            <h2 id="expl_header">Explanation</h2>
+        </th>
+    </tr>
+    <tr>
+        <td>
+            <!-- the left column contains the buggy code -->
+            <div id="buggy_code_container">
+                <!-- placeholder Python function highlighted with highlight.js -->
+                <pre><code class="python" id="buggy_code"># Consider the following function and test.
+525     def _read_body(self, code, headers, delegate):
+526         if "Content-Length" in headers:
+527             if "Transfer-Encoding" in headers:
+528                 # Response cannot contain both Content-Length and
+529                 # Transfer-Encoding headers.
+530                 # http://tools.ietf.org/html/rfc7230#section-3.3.3
+531                 raise httputil.HTTPInputError(
+532                     "Response with both Transfer-Encoding and Content-Length")
+533             if "," in headers["Content-Length"]:
+534                 # Proxies sometimes cause Content-Length headers to get
+535                 # duplicated.  If all the values are identical then we can
+536                 # use them but if they differ it's an error.
+537                 pieces = re.split(r',\s*', headers["Content-Length"])
+538                 if any(i != pieces[0] for i in pieces):
+539                     raise httputil.HTTPInputError(
+540                         "Multiple unequal Content-Lengths: %r" %
+541                         headers["Content-Length"])
+542                 headers["Content-Length"] = pieces[0]
+543 
+544             try:
+545                 content_length = int(headers["Content-Length"])
+546             except ValueError:
+547                 # Handles non-integer Content-Length value.
+548                 raise httputil.HTTPInputError(
+549                     "Only integer Content-Length is allowed: %s" % headers["Content-Length"])
+550 
+551             if content_length > self._max_body_size:
+552                 raise httputil.HTTPInputError("Content-Length too long")
+553         else:
+554             content_length = None
+555 
+556         if code == 204:
+557             # This response code is not allowed to have a non-empty body,
+558             # and has an implicit length of zero instead of read-until-close.
+559             # http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.3
+560             if ("Transfer-Encoding" in headers or
+561                     content_length not in (None, 0)):
+562                 raise httputil.HTTPInputError(
+563                     "Response with code %d should not have body" % code)
+564             content_length = 0
+565 
+566         if content_length is not None:
+567             return self._read_fixed_body(content_length, delegate)
+568         if headers.get("Transfer-Encoding") == "chunked":
+569             return self._read_chunked_body(delegate)
+570         if self.is_client:
+571             return self._read_body_until_close(delegate)
+572         return None</code></pre>
+            </div>
+            When running the tests for the project, the following error is reported:
+            <pre><code>_______________ HTTPServerRawTest.test_chunked_request_uppercase _______________
+        def test_chunked_request_uppercase(self):
+            # As per RFC 2616 section 3.6, "Transfer-Encoding" header's value is
+            # case-insensitive.
+            self.stream.write(b"""\
+    POST /echo HTTP/1.1
+    Transfer-Encoding: Chunked
+    Content-Type: application/x-www-form-urlencoded
+    
+    4
+    foo=
+    3
+    bar
+    0
+    
+    """.replace(b"\n", b"\r\n"))
+            read_stream_body(self.stream, self.stop)
+            headers, response = self.wait()
+>           self.assertEqual(json_decode(response), {u'foo': [u'bar']})
+E           AssertionError: {} != {'foo': ['bar']}
+E           - {}
+E           + {'foo': ['bar']}</code></pre>
+        </td>
+        <td>
+            <!-- the middle column contains the patch -->
+            <div id="patch_container">
+                <!-- placeholder diff file -->
+                <pre><code id="patch" class="language-diff">--- func_def.py
++++ func_def.py
+@@ -565,7 +565,7 @@
+ 
+         if content_length is not None:
+             return self._read_fixed_body(content_length, delegate)
+-        if headers.get("Transfer-Encoding") == "chunked":
++        if headers.get("Transfer-Encoding").lower() == "chunked":
+             return self._read_chunked_body(delegate)
+         if self.is_client:
+             return self._read_body_until_close(delegate)</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the right column contains the explanation for the patch -->
+            <div id="explanation">
+                <!-- now we show each of the three steps until successful repair. -->
+                <!-- step 1 foldable box -->
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_1" class="expl_header" onclick="toggleFold('expl_details_1')" style="background-color: lightgreen;">
+                        <h3>Step 1: The function is not handling the uppercase <code>'Chunked'</code> header correctly (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_1" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the test is failing, the function is not handling the uppercase <code>'Chunked'</code> header correctly.</li>
+                            <li>Prediction:  If I print <code>headers.get("Transfer-Encoding")</code>, while given the input and its intended role it should be <code>'chunked'</code>, it will be <code>'Chunked'</code>.</li>
+                            <li>Experiment: <code>b tornado/http1connection.py:568 ;; c ;; p headers.get("Transfer-Encoding")</code></li>
+                            <li>Observation: <code>'Chunked'</code></li>
+                            <li>Conclusion: The hypothesis is supported.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_2" class="expl_header" onclick="toggleFold('expl_details_2')" style="background-color: lightgreen;">
+                        <h3>Step 2: By changing <code>headers.get("Transfer-Encoding") == "chunked"</code> to <code>headers.get("Transfer-Encoding").lower() == "chunked"</code> in line 568, the failing test will pass (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_2" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: The previous hypothesis was supported. I think by changing <code>headers.get("Transfer-Encoding") == "chunked"</code> to <code>headers.get("Transfer-Encoding").lower() == "chunked"</code> in line 568, the failing test will pass.</li>
+                            <li>Prediction: If I change <code>headers.get("Transfer-Encoding") == "chunked"</code> to <code>headers.get("Transfer-Encoding").lower() == "chunked"</code> in line 568, the failing test will pass.</li>
+                            <li>Experiment: <code>REPLACE(568, "headers.get(\"Transfer-Encoding\") == \"chunked\"", "headers.get(\"Transfer-Encoding\").lower() == \"chunked\"") AND RUN</code></li>
+                            <li>Observation: <code>[The failing test now passes.]</code></li>
+                            <li>Conclusion: The hypothesis is supported. <code>&lt;DEBUGGING DONE&gt;</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+<script>hljs.highlightAll();</script>

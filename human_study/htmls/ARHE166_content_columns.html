@@ -1,0 +1,123 @@
+<table class="table">
+    <tr>
+        <th style="width: 33%">
+            <!-- the left column contains the buggy code -->
+            <h2>Original Code</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the middle column contains the patch -->
+            <h2>Automatically Suggested Patch</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the right column contains the explanation for the patch -->
+            <h2 id="expl_header">Explanation</h2>
+        </th>
+    </tr>
+    <tr>
+        <td>
+            <!-- the left column contains the buggy code -->
+            <div id="buggy_code_container">
+                <!-- placeholder Python function highlighted with highlight.js -->
+                <pre><code class="python" id="buggy_code"># Consider the following function and test.
+1 
+2 def file_name_check(file_name):
+3     """Create a function which takes a string representing a file's name, and returns
+4     'Yes' if the the file's name is valid, and returns 'No' otherwise.
+5     A file's name is considered to be valid if and only if all the following conditions 
+6     are met:
+7     - There should not be more than three digits ('0'-'9') in the file's name.
+8     - The file's name contains exactly one dot '.'
+9     - The substring before the dot should not be empty, and it starts with a letter from 
+10     the latin alphapet ('a'-'z' and 'A'-'Z').
+11     - The substring after the dot should be one of these: ['txt', 'exe', 'dll']
+12     Examples:
+13     file_name_check("example.txt") # => 'Yes'
+14     file_name_check("1example.dll") # => 'No' (the name should start with a latin alphapet letter)
+15     """
+16     suf = ['txt', 'exe', 'dll']
+17     lst = file_name.split(sep='.')
+18     if len(lst) != 2:
+19         return 'No'
+20     if not lst[1] in suf:
+21         return 'No'
+22     if len(lst[1]) == 0:
+23         return 'No'
+24     if not lst[0][0].isalpha():
+25         return 'No'
+26     t = len([x for x in lst[0] if x.isdigit()])
+27     if t > 3:
+28         return 'No'
+29     return 'Yes'
+30 assert file_name_check('.txt') == 'No', file_name_check('.txt')</code></pre>
+
+The test fails with the following error:
+
+<pre><code>Traceback (most recent call last):
+  File "/Users/sungmin/Documents/work/humaneval-mutator/asd/debugging.py", line 30, in <module>
+    assert file_name_check('.txt') == 'No', file_name_check('.txt')
+  File "/Users/sungmin/Documents/work/humaneval-mutator/asd/debugging.py", line 24, in file_name_check
+    if not lst[0][0].isalpha():
+IndexError: string index out of range</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the middle column contains the patch -->
+            <div id="patch_container">
+                <!-- placeholder diff file -->
+                <pre><code id="patch" class="language-diff">--- func_def.py
++++ func_def.py
+@@ -1,21 +1,21 @@
+         return 'No'
+     if len(lst[1]) == 0:
+         return 'No'
+-    if not lst[0][0].isalpha():
++    if len(lst[0]) == 0 or not lst[0][0].isalpha():
+         return 'No'
+     t = len([x for x in lst[0] if x.isdigit()])
+     if t > 3:</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the right column contains the explanation for the patch -->
+            <div id="explanation">
+                <!-- now we show each of the three steps until successful repair. -->
+                <!-- step 1 foldable box -->
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_1" class="expl_header" onclick="toggleFold('expl_details_1')" style="background-color: lightgreen;">
+                        <h3>Step 1: <code>lst[0][0].isalpha()</code> on line 24 is intended to check if the first character of the file name is a letter, but is causing an index out of range error. (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_1" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the error message is `IndexError: string index out of range`, the method is not handling the case where the file name is empty. Specifically, I think it is because `lst[0][0].isalpha()` on line 24 of method `file_name_check` is intended to check if the first character of the file name is a letter, but is causing an index out of range error.</li>
+                            <li>Prediction: When I stop the debugger at line 24, <code>lst[0] == ""</code> will be true.</li>
+                            <li>Experiment: <code>b debugging.py:24 ;; c ;; p lst[0]</code></li>
+                            <li>Observation: <code>''</code></li>
+                            <li>Conclusion: The hypothesis is supported.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_2" class="expl_header" onclick="toggleFold('expl_details_2')" style="background-color: lightgreen;">
+                        <h3>Step 2: Changing the code by adding a check for empty file name before line 24 may fix the code. (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_2" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the previous hypothesis was supported, I think changing the code by changing `e > 1` to `e > 0` may fix the code.</li>
+                            <li>Prediction: If I change <code>if not lst[0][0].isalpha():</code> to <code>if len(lst[0]) == 0 or not lst[0][0].isalpha():</code>, the test will pass.</li>
+                            <li>Experiment: <code>REPLACE(24, "if not lst[0][0].isalpha():", "if len(lst[0]) == 0 or not lst[0][0].isalpha():") AND RUN</code></li>
+                            <li>Observation: <code>[No exception triggered]</code></li>
+                            <li>Conclusion: The hypothesis is supported. <code>&lt;DEBUGGING DONE&gt;</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+<script>hljs.highlightAll();</script>

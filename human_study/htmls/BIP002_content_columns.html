@@ -1,0 +1,157 @@
+<table class="table">
+    <tr>
+        <th style="width: 33%">
+            <!-- the left column contains the buggy code -->
+            <h2>Original Code</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the middle column contains the patch -->
+            <h2>Automatically Suggested Patch</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the right column contains the explanation for the patch -->
+            <h2 id="expl_header">Explanation</h2>
+        </th>
+    </tr>
+    <tr>
+        <td>
+            <!-- the left column contains the buggy code -->
+            <div id="buggy_code_container">
+                <!-- placeholder Python function highlighted with highlight.js -->
+                <pre><code class="python" id="buggy_code"># Consider the following function and test.
+642     def register_named_middleware(
+643         self, middleware, route_names, attach_to="request"
+644     ):
+645         if attach_to == "request":
+646             for _rn in route_names:
+647                 if _rn not in self.named_request_middleware:
+648                     self.named_request_middleware[_rn] = deque()
+649                 if middleware not in self.named_request_middleware[_rn]:
+650                     self.named_request_middleware[_rn].append(middleware)
+651         if attach_to == "response":
+652             for _rn in route_names:
+653                 if _rn not in self.named_response_middleware:
+654                     self.named_response_middleware[_rn] = deque()
+655                 if middleware not in self.named_response_middleware[_rn]:
+656                     self.named_response_middleware[_rn].append(middleware)</code></pre>
+            </div>
+            When running the tests for the project, the following error is reported:
+            <pre><code>___________________________ test_bp_middleware_order ___________________________
+    def test_bp_middleware_order(app):
+        blueprint = Blueprint("test_bp_middleware_order")
+        order = list()
+        @blueprint.middleware("request")
+        def mw_1(request):
+            order.append(1)
+        @blueprint.middleware("request")
+        def mw_2(request):
+            order.append(2)
+        @blueprint.middleware("request")
+        def mw_3(request):
+            order.append(3)
+        @blueprint.middleware("response")
+        def mw_4(request, response):
+            order.append(6)
+        @blueprint.middleware("response")
+        def mw_5(request, response):
+            order.append(5)
+        @blueprint.middleware("response")
+        def mw_6(request, response):
+            order.append(4)
+    
+        @blueprint.route("/")
+        def process_response(request):
+            return text("OK")
+    
+        app.blueprint(blueprint)
+        order.clear()
+        request, response = app.test_client.get("/")
+    
+        assert response.status == 200
+>       assert order == [1, 2, 3, 4, 5, 6]
+E       assert [1, 2, 3, 6, 5, 4] == [1, 2, 3, 4, 5, 6]
+E         At index 3 diff: 6 != 4
+E         Use -v to get the full diff</code></pre>
+        </td>
+        <td>
+            <!-- the middle column contains the patch -->
+            <div id="patch_container">
+                <!-- placeholder diff file -->
+                <pre><code id="patch" class="language-diff">--- func_def.py
++++ func_def.py
+@@ -646,11 +646,11 @@
+                 if _rn not in self.named_request_middleware:
+                     self.named_request_middleware[_rn] = deque()
+                 if middleware not in self.named_request_middleware[_rn]:
+-                    self.named_request_middleware[_rn].append(middleware)
++                    self.named_request_middleware[_rn].appendleft(middleware)
+         if attach_to == "response":
+             for _rn in route_names:
+                 if _rn not in self.named_response_middleware:
+                     self.named_response_middleware[_rn] = deque()
+                 if middleware not in self.named_response_middleware[_rn]:
+-                    self.named_response_middleware[_rn].append(middleware)
++                    self.named_response_middleware[_rn].appendleft(middleware)</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the right column contains the explanation for the patch -->
+            <div id="explanation">
+                <!-- now we show each of the three steps until successful repair. -->
+                <!-- step 1 foldable box -->
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_1" class="expl_header" onclick="toggleFold('expl_details_1')" style="background-color: lightyellow;">
+                        <h3>Step 1: The program is appending the middleware in the wrong order. (⚠️)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_1" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the order of the middleware is incorrect, the function is at minimum misordering the middleware. Specifically, I think the program is appending the middleware in the wrong order.</li>
+                            <li>Prediction:  If I print <code>self.named_request_middleware</code> and <code>self.named_response_middleware</code> at line 656, the order of the middleware will be incorrect.</li>
+                            <li>Experiment: <code>b sanic/app.py:656 ;; c ;; p self.named_request_middleware, self.named_response_middleware</code></li>
+                            <li>Observation: <code>[The breakpoint was not covered.]</code></li>
+                            <li>Conclusion: The hypothesis is undecided due to experiment error.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_2" class="expl_header" onclick="toggleFold('expl_details_2')" style="background-color: lightyellow;">
+                        <h3>Step 2: The test is incorrect (⚠️)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_2" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: The previous hypothesis was undecided due to experiment error. I think the program is appending the middleware in the correct order, but the test is incorrect.</li>
+                            <li>Prediction: If I print <code>order</code> at line 66, the order of the middleware will be correct.</li>
+                            <li>Experiment: <code>b sanic/app.py:66 ;; c ;; p order</code></li>
+                            <li>Observation: <code>[The breakpoint was not covered.]</code></li>
+                            <li>Conclusion: The hypothesis is undecided due to experiment error.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_3" class="expl_header" onclick="toggleFold('expl_details_3')" style="background-color: lightyellow;">
+                        <h3>Step 3: The test is incorrect (⚠️)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_3" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: The previous hypothesis was undecided due to experiment error. I think the program is appending the middleware in the correct order, but the test is incorrect.</li>
+                            <li>Prediction: If I print <code>order</code> at line 66, the order of the middleware will be correct.</li>
+                            <li>Experiment: <code>b sanic/app.py:66 ;; c ;; p order</code></li>
+                            <li>Observation: <code>[The breakpoint was not covered.]</code></li>
+                            <li>Conclusion: The hypothesis is undecided due to experiment error.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+<script>hljs.highlightAll();</script>

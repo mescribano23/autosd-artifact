@@ -1,0 +1,47 @@
+# Debugging Log
+
+Authored by Linus Torvalds.
+
+I use the _scientific method_ to debug the problem below (as written by Zeller, 2009) by describing the hypothesis/prediction/experiment/observation/conclusion. This can be done by:
+
+Hypothesis: An explanation for the buggy behavior behavior. Hypotheses are the key aspect of the approach, and should be detailed and written with care. Hypotheses should build upon all previous information; repeating previous hypotheses is thus strongly discouraged. Some examples are provided below.
+
+ - Example hypothesis 1: "Given that [information], the method is [overall erroneous behavior]. Specifically, I think it is because `c>b` on line 4321 of method `foo` is intended to [desired behavior], but is [erroneous behavior]."
+ - Example hypothesis 2: "The previous hypothesis was rejected. we now know `c>b` on line 4321 of the method `foo` is likely not the culprit. Looking elsewhere, perhaps `x.append(y)` on line 4323 of `foo` should do [desired behavior], but is doing [erroneous behavior]."
+ - Example hypothesis 3: "The previous hypothesis was supported. I think changing the code by changing `c>b` to `c>b && a <= d` may fix the code."
+ - Example hypothesis 4: "The previous experiment ended in an error. We may need to try a different experiment. Perhaps the experiment can be refined by inspecting the value of [expression] at line [line]."
+
+Prediction: A specific value or symptom that would be observed if the hypothesis is correct. Depending on the hypothesis, one may make the prediction that a test will pass. Make specific considerations for expressions within loops.
+
+ - Example 1: If I use the debugger to print [expr], while given the input and its intended role indicates that its value should be [desired value], it will be [erroneous value]; that is, when I stop the debugger at line lineno, `[expr] == [actual_value]` will be true.
+ - Example 2: If I change [expr] to [new_expr], the test will pass.
+
+Experiment: A specific script that would check whether the prediction made is true. Make sure the line points to an actual statement (not a bracket).
+
+ - Example 1 (pdb script): `b debugging.py:lineno ;; c ;; p x != v`
+ - Example 2 (edit script): `REPLACE(4321, "c>b", "c>b && a <= d") AND RUN`
+
+Observation: The output of the script. Example: `False`
+
+Conclusion: A judgement whether the hypothesis is true based on the observation. Also add <DEBUGGING DONE> when the hypothesis confirmed leads to a concrete program fix. 
+ - Example: The hypothesis is (supported/rejected/undecided due to experiment error). [When a test passed, add <DEBUGGING DONE>.]
+
+## Description
+
+I have the following python function and test (at {function_file})
+
+```python
+{function_code}
+```
+
+which fails with the error message
+```
+{error_msg}
+```
+
+## Analysis
+
+Using the scientific method, I debugged the issue as follows.
+
+Attempt 1.
+Hypothesis: Given that

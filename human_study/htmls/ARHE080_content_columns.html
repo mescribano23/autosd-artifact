@@ -1,0 +1,127 @@
+<table class="table">
+    <tr>
+        <th style="width: 33%">
+            <!-- the left column contains the buggy code -->
+            <h2>Original Code</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the middle column contains the patch -->
+            <h2>Automatically Suggested Patch</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the right column contains the explanation for the patch -->
+            <h2 id="expl_header">Explanation</h2>
+        </th>
+    </tr>
+    <tr>
+        <td>
+            <!-- the left column contains the buggy code -->
+            <div id="buggy_code_container">
+                <!-- placeholder Python function highlighted with highlight.js -->
+                <pre><code class="python" id="buggy_code"># Consider the following function and test.
+1 
+2 def is_happy(s):
+3     """You are given a string s.
+4     Your task is to check if the string is happy or not.
+5     A string is happy if its length is at least 3 and every 3 consecutive letters are distinct
+6     For example:
+7     is_happy(a) => False
+8     is_happy(aa) => False
+9     is_happy(abcd) => True
+10     is_happy(aabb) => False
+11     is_happy(adb) => True
+12     is_happy(xyy) => False
+13     """
+14     if len(s) < 3:
+15         return 0
+16     for i in range(len(s) - 2):
+17         if s[i] == s[i + 1] or s[i + 0] == s[i + 2] or s[i] == s[i + 2]:
+18             return 0
+19     return 1
+20 assert is_happy('xyy') == False, is_happy('xyy')</code></pre>
+
+The test fails with the following error:
+
+<pre><code>Traceback (most recent call last):
+  File "/Users/sungmin/Documents/work/humaneval-mutator/asd/debugging.py", line 20, in ...
+    assert is_happy('xyy') == False, is_happy('xyy')
+AssertionError: 1</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the middle column contains the patch -->
+            <div id="patch_container">
+                <!-- placeholder diff file -->
+                <pre><code id="patch" class="language-diff">--- func_def.py
++++ func_def.py
+@@ -16,7 +16,7 @@
+     for i in range(len(s) - 2):
+         if s[i] == s[i + 1] or s[i + 0] == s[i + 2] or s[i] == s[i + 2]:
+             return 0
+-    return 1
++    return 0
+ assert is_happy('xyy') == False, is_happy('xyy')</code></pre>
+
+            </div>
+        </td>
+        <td>
+            <!-- the right column contains the explanation for the patch -->
+            <div id="explanation">
+                <!-- now we show each of the three steps until successful repair. -->
+                <!-- step 1 foldable box -->
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_1" class="expl_header" onclick="toggleFold('expl_details_1')" style="background-color: lightcoral;">
+                        <h3>Step 1: The condition on line 17 is not correctly identifying when a string is not happy (❌)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_1" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: The current output is problematic because the function is returning 1, when it should return 0. Perhaps the condition on line 17 is not correctly identifying when a string is not happy.</li>
+                            <li>Prediction: If this hypothesis is correct, when I print <code>s[i] == s[i + 1] or s[i + 0] == s[i + 2] or s[i] == s[i + 2]</code> using the debugger, it will be true.</li>
+                            <li>Experiment: <code>b debugging.py:17 ;; c ;; p s[i] == s[i + 1] or s[i + 0] == s[i + 2] or s[i] == s[i + 2]</code></li>
+                            <li>Observation: <code>False</code></li>
+                            <li>Conclusion: The hypothesis is rejected; we need further investigation.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_2" class="expl_header" onclick="toggleFold('expl_details_2')" style="background-color: lightgreen;">
+                        <h3>Step 2: The return statement on line 19 is returning 1, when it should return 0. (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_2" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: "The condition on line 17 is not correctly identifying when a string is not happy" was REJECTED. Then perhaps the return statement on line 19 is returning 1, when it should return 0.</li>
+                            <li>Prediction: If this hypothesis is correct, when I print <code>s[i] == s[i + 1] or s[i + 0] == s[i + 2] or s[i] == s[i + 2]</code> using the debugger, it will be false.</li>
+                            <li>Experiment: <code>b debugging.py:19 ;; c ;; p s[i] == s[i + 1] or s[i + 0] == s[i + 2] or s[i] == s[i + 2]</code></li>
+                            <li>Observation: <code>False</code></li>
+                            <li>Conclusion: The hypothesis is supported, but we need more investigation.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_3" class="expl_header" onclick="toggleFold('expl_details_3')" style="background-color: lightgreen;">
+                        <h3>Step 3: It should be changed to return 0. (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_3" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: "The return statement on line 19 is returning 1, when it should return 0" was SUPPORTED. Then perhaps it should be changed to return 0.</li>
+                            <li>Prediction: If return statement on line 19 is modified to `return 0`, the test will pass.</li>
+                            <li>Experiment: <code>REPLACE(19, "return 1", "return 0") AND RUN</code></li>
+                            <li>Observation: <code>[No exception triggered]</code></li>
+                            <li>Conclusion: The hypothesis is supported. <code>&lt;DEBUGGING DONE&gt;</code></li> 
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+<script>hljs.highlightAll();</script>

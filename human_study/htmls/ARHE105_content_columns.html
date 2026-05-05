@@ -1,0 +1,138 @@
+<table class="table">
+    <tr>
+        <th style="width: 33%">
+            <!-- the left column contains the buggy code -->
+            <h2>Original Code</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the middle column contains the patch -->
+            <h2>Automatically Suggested Patch</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the right column contains the explanation for the patch -->
+            <h2 id="expl_header">Explanation</h2>
+        </th>
+    </tr>
+    <tr>
+        <td>
+            <!-- the left column contains the buggy code -->
+            <div id="buggy_code_container">
+                <!-- placeholder Python function highlighted with highlight.js -->
+                <pre><code class="python" id="buggy_code"># Consider the following function and test.
+1 
+2 def closest_integer(value):
+3     """
+4     Create a function that takes a value (string) representing a number
+5     and returns the closest integer to it. If the number is equidistant
+6     from two integers, round it away from zero.
+7 
+8     Examples
+9     >>> closest_integer("10")
+10     10
+11     >>> closest_integer("15.3")
+12     15
+13 
+14     Note:
+15     Rounding away from zero means that if the given number is equidistant
+16     from two integers, the one you should return is the one that is the
+17     farthest from zero. For example closest_integer("14.5") should
+18     return 15 and closest_integer("-14.5") should return -15.
+19     """
+20     from math import floor, ceil
+21     if value.count('.') == 1:
+22         while value[-1] == '0':
+23             value = value[:-1]
+24     num = float(value)
+25     if num > 0:
+26         res = ceil(num)
+27     else:
+28         res = floor(num)
+29     return res
+30 assert closest_integer('15.3') == 15, closest_integer('15.3')</code></pre>
+
+The test fails with the following error:
+
+<pre><code>Traceback (most recent call last):
+  File "/Users/sungmin/Documents/work/humaneval-mutator/asd/debugging.py", line 30, in ...
+    assert closest_integer('15.3') == 15, closest_integer('15.3')
+AssertionError: 16</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the middle column contains the patch -->
+            <div id="patch_container">
+                <!-- placeholder diff file -->
+                <pre><code id="patch" class="language-diff">--- func_def.py
++++ func_def.py
+@@ -1,23 +1,23 @@
+             value = value[:-1]
+     num = float(value)
+     if num > 0:
+-        res = ceil(num)
++        res = round(num)
+     else:
+         res = floor(num)
+     return res</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the right column contains the explanation for the patch -->
+            <div id="explanation">
+                <!-- now we show each of the three steps until successful repair. -->
+                <!-- step 1 foldable box -->
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_1" class="expl_header" onclick="toggleFold('expl_details_1')" style="background-color: lightyellow;">
+                        <h3>Step 1: <code>res = ceil(num)</code> on line 26 is intended to return the closest integer, but is returning the next integer (⚠️)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_1" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the function is supposed to return the closest integer to the input value, the method is returning the wrong value. Specifically, I think it is because `res = ceil(num)` on line 26 of method `closest_integer` is intended to return the closest integer, but is returning the next integer.</li>
+                            <li>Prediction: When I stop the debugger at line 26, <code>res == 16</code> will be true.</li>
+                            <li>Experiment: <code>b debugging.py:26 ;; c ;; p res</code></li>
+                            <li>Observation: <code>*** NameError: name 'res' is not defined</code></li>
+                            <li>Conclusion: The hypothesis is rejected due to experiment error.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_2" class="expl_header" onclick="toggleFold('expl_details_2')" style="background-color: lightgreen;">
+                        <h3>Step 2: <code>res = ceil(num)</code> on line 26 is intended to return the closest integer, but is returning the next integer (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_2" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the function is supposed to return the closest integer to the input value, the method is returning the wrong value. Specifically, I think it is because `res = ceil(num)` on line 26 of method `closest_integer` is intended to return the closest integer, but is returning the next integer.</li>
+                            <li>Prediction: When I stop the debugger at line 26, <code>ceil(num) == 16</code> will be true.</li>
+                            <li>Experiment: <code>b debugging.py:26 ;; c ;; p ceil(num)</code></li>
+                            <li>Observation: <code>16</code></li>
+                            <li>Conclusion: The hypothesis is supported. <code>&lt;DEBUGGING DONE&gt;</code></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_3" class="expl_header" onclick="toggleFold('expl_details_3')" style="background-color: lightgreen;">
+                        <h3>Step 3: Changing the code by changing <code>res = ceil(num)</code> to <code>res = round(num)</code> may fix the code. (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_3" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the previous hypothesis was supported, I think changing the code by changing `res = ceil(num)` to `res = round(num)` may fix the code.</li>
+                            <li>Prediction: If I change <code>res = ceil(num)</code> to <code>res = round(num)</code>, the test will pass.</li>
+                            <li>Experiment: <code>REPLACE(26, "res = ceil(num)", "res = round(num)") AND RUN</code></li>
+                            <li>Observation: <code>[No exception triggered]</code></li>
+                            <li>Conclusion: The hypothesis is supported. <code>&lt;DEBUGGING DONE&gt;</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+<script>hljs.highlightAll();</script>

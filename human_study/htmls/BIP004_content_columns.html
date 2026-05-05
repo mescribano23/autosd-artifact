@@ -1,0 +1,141 @@
+<table class="table">
+    <tr>
+        <th style="width: 33%">
+            <!-- the left column contains the buggy code -->
+            <h2>Original Code</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the middle column contains the patch -->
+            <h2>Automatically Suggested Patch</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the right column contains the explanation for the patch -->
+            <h2 id="expl_header">Explanation</h2>
+        </th>
+    </tr>
+    <tr>
+        <td>
+            <!-- the left column contains the buggy code -->
+            <div id="buggy_code_container">
+                <!-- placeholder Python function highlighted with highlight.js -->
+                <pre><code class="python" id="buggy_code"># Consider the following function and test.
+474     def _can_keep_alive(self, start_line, headers):
+475         if self.params.no_keep_alive:
+476             return False
+477         connection_header = headers.get("Connection")
+478         if connection_header is not None:
+479             connection_header = connection_header.lower()
+480         if start_line.version == "HTTP/1.1":
+481             return connection_header != "close"
+482         elif ("Content-Length" in headers
+483               or headers.get("Transfer-Encoding", "").lower() == "chunked"
+484               or start_line.method in ("HEAD", "GET")):
+485             return connection_header == "keep-alive"
+486         return False</code></pre>
+            </div>
+            When running the tests for the project, the following error is reported:
+            <pre><code>______________ HTTP1ConnectionTest.test_http10_no_content_length _______________
+    @gen_test
+    def test_http10_no_content_length(self):
+        # Regression test for a bug in which can_keep_alive would crash
+        # for an HTTP/1.0 (not 1.1) response with no content-length.
+        conn = HTTP1Connection(self.client_stream, True)
+        self.server_stream.write(b"HTTP/1.0 200 Not Modified\r\n\r\nhello")
+        self.server_stream.close()
+    
+        event = Event()
+        test = self
+        body = []
+    
+        class Delegate(HTTPMessageDelegate):
+            def headers_received(self, start_line, headers):
+                test.code = start_line.code
+    
+            def data_received(self, data):
+                body.append(data)
+    
+            def finish(self):
+                event.set()
+    
+>       yield conn.read_response(Delegate())
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+E             AttributeError: 'ResponseStartLine' object has no attribute 'method'</code></pre>
+        </td>
+        <td>
+            <!-- the middle column contains the patch -->
+            <div id="patch_container">
+                <!-- placeholder diff file -->
+                <pre><code id="patch" class="language-diff">--- func_def.py
++++ func_def.py
+@@ -480,8 +481,7 @@
+         if start_line.version == "HTTP/1.1":
+             return connection_header != "close"
+         elif ("Content-Length" in headers
+-              or headers.get("Transfer-Encoding", "").lower() == "chunked"
+-              or start_line.method in ("HEAD", "GET")):
++              or headers.get("Transfer-Encoding", "").lower() == "chunked"):
+             return connection_header == "keep-alive"
+         return False</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the right column contains the explanation for the patch -->
+            <div id="explanation">
+                <!-- now we show each of the three steps until successful repair. -->
+                <!-- step 1 foldable box -->
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_1" class="expl_header" onclick="toggleFold('expl_details_1')" style="background-color: lightyellow;">
+                        <h3>Step 1: The code is trying to access the <code>method</code> attribute of a <code>ResponseStartLine</code> object, but it does not exist. (⚠️)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_1" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the error message is an AttributeError, I think the code is trying to access an attribute that does not exist. Specifically, I think the code is trying to access the <code>method</code> attribute of a <code>ResponseStartLine</code> object, but it does not exist.</li>
+                            <li>Prediction:  If I print <code>start_line.__dict__</code>, the <code>method</code> attribute will not be present.</li>
+                            <li>Experiment: <code>b tornado/http1connection.py:486 ;; c ;; p start_line.__dict__</code></li>
+                            <li>Observation: <code>[The breakpoint line was not covered by the test.]</code></li>
+                            <li>Conclusion: The hypothesis is undecided due to experiment error.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_2" class="expl_header" onclick="toggleFold('expl_details_2')" style="background-color: lightyellow;">
+                        <h3>Step 2: The code is trying to access the <code>method</code> attribute of a <code>ResponseStartLine</code> object, but it does not exist. (⚠️)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_2" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: The previous experiment was not successful. I think the code is trying to access an attribute that does not exist. Specifically, I think the code is trying to access the <code>method</code> attribute of a <code>ResponseStartLine</code> object, but it does not exist.</li>
+                            <li>Prediction: If I print <code>start_line.__class__.__dict__</code>, the <code>method</code> attribute will not be present.</li>
+                            <li>Experiment: <code>b tornado/http1connection.py:486 ;; c ;; p start_line.__class__.__dict__</code></li>
+                            <li>Observation: <code>[The breakpoint line was not covered by the test.]</code></li>
+                            <li>Conclusion: The hypothesis is undecided due to experiment error.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_3" class="expl_header" onclick="toggleFold('expl_details_3')" style="background-color: lightyellow;">
+                        <h3>Step 3: The code is trying to access the <code>method</code> attribute of a <code>ResponseStartLine</code> object, but it does not exist. (⚠️)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_3" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: The previous experiment was not successful. I think the code is trying to access an attribute that does not exist. Specifically, I think the code is trying to access the <code>method</code> attribute of a <code>ResponseStartLine</code> object, but it does not exist.</li>
+                            <li>Prediction:  If I print <code>start_line.__class__.__name__</code>, the output will be <code>ResponseStartLine</code>.</li>
+                            <li>Experiment: <code>b tornado/http1connection.py:486 ;; c ;; p start_line.__class__.__name__</code></li>
+                            <li>Observation: <code>[The breakpoint line was not covered by the test.]</code></li>
+                            <li>Conclusion: The hypothesis is undecided due to experiment error.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+<script>hljs.highlightAll();</script>

@@ -1,0 +1,27 @@
+## Description
+
+The bug reporter notes:
+
+{{report_text}}
+
+The current version of the code fails on the test method:
+
+```java
+{{test_method}}
+```
+
+With the error stack and message
+
+```
+{{error_message}}
+```
+
+The bug reporter additionally noted that the method below was the most likely culprit:
+
+```java
+{{buggy_method}}
+```
+Breakpoints can be made for the method above via {{bm_classpath}}:lineno.
+
+## Analysis
+

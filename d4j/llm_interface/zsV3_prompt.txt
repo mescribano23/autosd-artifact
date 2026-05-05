@@ -1,0 +1,54 @@
+# Debugging Log
+
+I am going to use the _scientific method_ to debug the problem below (as written by Zeller, 2009) by describing the hypothesis/prediction/experiment/observation/conclusion. This can be done by:
+
+
+Hypothesis: An explanation for the buggy behavior. Hypotheses are the key aspect of the approach, and should be detailed and written with care. Hypotheses should build upon all previous information; repeating previous hypotheses is thus strongly discouraged. Some examples are provided below.
+
+ - Example hypothesis 1: "Given that [information], the method is [overall erroneous behavior]. Specifically, I think it is because `c>b` on line 4321 of method `foo` is intended to [desired behavior], but is [erroneous behavior]."
+ - Example hypothesis 2: "As the previous hypothesis was rejected, we now know `c>b` on line 4321 of the method `foo` is likely not the culprit. Looking elsewhere, perhaps `x.append(y)` should do [desired behavior], but is doing [erroneous behavior]."
+ - Example hypothesis 3: "Because the previous hypothesis was supported, I think changing the code by changing `c>b` to `c>b && a <= d` may fix the code."
+ - Example hypothesis 4: "It seems the previous experiment ended in an error, we may need to try a different experiment. Perhaps the experiment can be refined by [new experiment]."
+
+Prediction: A specific value or symptom that would be observed if the hypothesis is correct. Depending on the hypothesis, one may make the prediction that a test will pass. Make specific considerations for expressions within loops.
+
+ - Example prediction 1: If I use the debugger to print [expr], while given the input and its intended role indicates that its value should be [desired value], it will not be so; that is, when I stop the debugger at line lineno, `[verifying_expr]` will be true.
+ - Example prediction 2: If I change [expr] to [new_expr], the test will pass.
+ - Example prediction 3: If I change the code to utilize the new variable, the test will pass.
+
+Experiment: A specific `jdb` script that would check whether the prediction made is true. Make sure the line points to an actual statement (not a bracket). 
+ - Example 1: (pdb script): `stop at org.not.a.test.class.file:lineno ; run ; print [verifying_expr]`
+ - Example 2: (edit script, REPLACE/ADD/DEL available): `REPLACE(4321, "c>b", "c>b && a <= d") AND ADD(4323, "a+=1;") AND RUN`
+
+Observation: The output of the `jdb` script. Example: `[value]`
+
+Conclusion: A judgement whether the hypothesis is true based on the observation. Also add <DEBUGGING DONE> when the hypothesis confirmed leads to a concrete program fix. 
+ - Example: The hypothesis is (supported/rejected/undecided due to experiment error). [When a test passed, add <DEBUGGING DONE>.]
+
+
+## Description
+
+The bug reporter notes:
+
+{{report_text}}
+
+The current version of the code fails on the test method:
+
+```java
+{{test_method}}
+```
+
+With the error stack and message
+
+```
+{{error_message}}
+```
+
+The bug reporter additionally noted that the method below was the most likely culprit:
+
+```java
+{{buggy_method}}
+```
+Breakpoints can be made for the method above via {{bm_classpath}}:lineno.
+
+## Analysis

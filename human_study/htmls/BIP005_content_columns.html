@@ -1,0 +1,139 @@
+<table class="table">
+    <tr>
+        <th style="width: 33%">
+            <!-- the left column contains the buggy code -->
+            <h2>Original Code</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the middle column contains the patch -->
+            <h2>Automatically Suggested Patch</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the right column contains the explanation for the patch -->
+            <h2 id="expl_header">Explanation</h2>
+        </th>
+    </tr>
+    <tr>
+        <td>
+            <!-- the left column contains the buggy code -->
+            <div id="buggy_code_container">
+                <!-- placeholder Python function highlighted with highlight.js -->
+                <pre><code class="python" id="buggy_code"># Consider the following function and test.
+623 def lib2to3_parse(src_txt: str) -> Node:
+624     """Given a string with source, return the lib2to3 Node."""
+625     grammar = pygram.python_grammar_no_print_statement
+626     if src_txt[-1] != "\n":
+627         src_txt += "\n"
+628     for grammar in GRAMMARS:
+629         drv = driver.Driver(grammar, pytree.convert)
+630         try:
+631             result = drv.parse_string(src_txt, True)
+632             break
+633
+634         except ParseError as pe:
+635             lineno, column = pe.context[1]
+636             lines = src_txt.splitlines()
+637             try:
+638                 faulty_line = lines[lineno - 1]
+639             except IndexError:
+640                 faulty_line = "<line number missing in source>"
+641             exc = ValueError(f"Cannot parse: {lineno}:{column}: {faulty_line}")
+642     else:
+643         raise exc from None
+644
+645     if isinstance(result, Leaf):
+646         result = Node(syms.file_input, [result])
+647     return result</code></pre>
+            </div>
+            When running the tests for the project, the following error is reported:
+            <pre><code>___________________________ BlackTestCase.test_empty ___________________________
+    @patch("black.dump_to_file", dump_to_stderr)
+    def test_empty(self) -> None:
+        source = expected = ""
+>       actual = fs(source)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+E       IndexError: string index out of range</code></pre>
+        </td>
+        <td>
+            <!-- the middle column contains the patch -->
+            <div id="patch_container">
+                <!-- placeholder diff file -->
+                <pre><code id="patch" class="language-diff">--- func_def.py
++++ func_def.py
+@@ -623,8 +623,11 @@
+ def lib2to3_parse(src_txt: str) -> Node:
+     """Given a string with source, return the lib2to3 Node."""
+     grammar = pygram.python_grammar_no_print_statement
+-    if src_txt[-1] != "\n":
+-        src_txt += "\n"
++    if src_txt == "":
++        src_txt = "\n"
++    else:
++        if src_txt[-1] != "\n":
++            src_txt += "\n"
+     for grammar in GRAMMARS:
+         drv = driver.Driver(grammar, pytree.convert)
+         try:</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the right column contains the explanation for the patch -->
+            <div id="explanation">
+                <!-- now we show each of the three steps until successful repair. -->
+                <!-- step 1 foldable box -->
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_1" class="expl_header" onclick="toggleFold('expl_details_1')" style="background-color: lightgreen;">
+                        <h3>Step 1: The error is caused by the code trying to access an index that is out of range (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_1" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the error message is an IndexError, I think the error is caused by the code trying to access an index that is out of range.</li>
+                            <li>Prediction:  If I print <code>src_txt</code> at line 626, it will be an empty string.</li>
+                            <li>Experiment: <code>b black.py:626 ;; c ;; p src_txt</code></li>
+                            <li>Observation: <code>''</code></li>
+                            <li>Conclusion: The hypothesis is supported.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_2" class="expl_header" onclick="toggleFold('expl_details_2')" style="background-color: lightgreen;">
+                        <h3>Step 2: The error is caused by the code trying to access the last character of an empty string (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_2" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: The previous hypothesis was supported. I think the error is caused by the code trying to access the last character of an empty string.</li>
+                            <li>Prediction: If I print `src_txt[-1]` at line 626, it will raise an IndexError.</li>
+                            <li>Experiment: <code>b black.py:626 ;; c ;; p src_txt[-1]</code></li>
+                            <li>Observation: <code>*** IndexError: string index out of range</code></li>
+                            <li>Conclusion: The hypothesis is supported.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_3" class="expl_header" onclick="toggleFold('expl_details_3')" style="background-color: lightcoral;">
+                        <h3>Step 3: The error is caused by the code trying to access the last character of an empty string (❌)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_3" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: The previous hypothesis was supported. I think the error is caused by the code trying to access the last character of an empty string.</li>
+                            <li>Prediction: If I change the code to only add a newline if `src_txt` is not empty, the error will be resolved.</li>
+                            <li>Experiment: <code>REPLACE(626, "if src_txt[-1] != '\\n':\n    src_txt += '\\n'", "if src_txt:\n    if src_txt[-1] != '\\n':\n        src_txt += '\\n'") AND RUN</code></li>
+                            <li>Observation: <code>[The expression was not found in line 626.]</code></li>
+                            <li>Conclusion: The hypothesis is rejected.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+<script>hljs.highlightAll();</script>

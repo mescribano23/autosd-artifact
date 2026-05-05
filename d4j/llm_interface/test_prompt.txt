@@ -1,0 +1,73 @@
+# Debugging Log
+
+This log documents my stream of thought as I debug an issue with a bug report.
+
+## Description
+
+The bug reporter notes:
+
+> Whitespaces are discared in Element.html() method
+> 
+> Hi,  
+> I'm trying to make an exact copy of a document (changing just a couple of attributes and appending a few nodes) and the trim() inside the Element.html() is killing me.  
+> I'm using Parsers.xml() and no prettyPrint.
+> I think this trim should be enabled for prettyPrint only.
+
+The current version of the code fails on the test method:
+
+```java
+    @Test public void testNotPretty() {
+        Document doc = Jsoup.parse("<div>   \n<p>Hello\n there\n</p></div>");
+        doc.outputSettings().prettyPrint(false);
+
+        Element div = doc.select("div").first();
+        assertEquals("   \n<p>Hello\n there\n</p>", div.html()); // <-- fails here
+    }
+```
+
+With the error stack and message
+
+```
+junit.framework.AssertionFailedError: expected:<[
+	org.junit.Assert.assertEquals(Assert.java:115)
+	org.junit.Assert.assertEquals(Assert.java:144)
+	org.jsoup.nodes.ElementTest.testNotPretty(ElementTest.java:247)
+```
+
+## Analysis
+
+I first decided to look at the code of the non-test within-project method (in the format `class.method` for clarity) `html`.
+
+The method looks like this:
+
+```java
+1098     public String html() {
+1099         StringBuilder accum = new StringBuilder();
+1100         html(accum);
+1101         return accum.toString().trim();
+1102     }
+```
+
+I am going to use the _scientific method_ to debug this problem (as written by Zeller, 2009) by describing the hypothesis/prediction/experiment/observation/conclusion. This can be done by:
+
+
+Hypothesis: An explanation for the buggy behavior behavior. Hypotheses are the key aspect of the approach, and should be detailed and written with care. Hypotheses should build upon all previous information; repeating previous hypotheses is thus strongly discouraged. Some examples are provided below.
+
+ - Example hypothesis 1: "Given that [information], the method is [overall erroneous behavior]. Specifically, I think it is because `c>b` on line 4321 of method `foo` is intended to [desired behavior], but is [erroneous behavior]."
+ - Example hypothesis 2: "Given that the previous hypothesis was rejected, we now know `c>b` on line 4321 of the method `foo` is likely not the culprit. With this in mind, perhaps `x.append(y)` should do [desired behavior], but is doing [erroneous behavior]."
+ - Example hypothesis 3: "Given that the previous hypothesis was supported, I think changing the code by changing `c>b` to `c>b && a <= d` may fix the code."
+ - Example hypothesis 4: "Given that the previous experiment ended in an error, we may need to try a different experiment. Perhaps the experiment can be refined by [new experiment]."
+
+Prediction: A specific value or symptom that would be observed if the hypothesis is correct. Example: If I use the debugger to print `x`, it will not be the correct value `v`; that is, when I stop the debugger at line lineno, `x != v` will be true.
+
+Experiment: A specific `jdb` script that would check whether the prediction made is true. Make sure the line points to an actual statement (not a bracket). Example: `stop at org.not.a.test.class.file:lineno ; run ; print x != v`
+
+Observation: The output of the `jdb` script. Example: `False`
+
+Conclusion: A judgement whether the hypothesis is true based on the observation. Also add <DEBUGGING DONE> when the hypothesis confirmed leads to a concrete program fix. Example: The hypothesis is (supported/rejected/undecided due to experiment error).
+
+
+Below are my actual attempts, based on the description above.
+
+Attempt 1.
+Hypothesis: Given that

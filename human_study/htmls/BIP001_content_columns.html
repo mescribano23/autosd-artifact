@@ -1,0 +1,117 @@
+<table class="table">
+    <tr>
+        <th style="width: 33%">
+            <!-- the left column contains the buggy code -->
+            <h2>Original Code</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the middle column contains the patch -->
+            <h2>Automatically Suggested Patch</h2>
+        </th>
+        <th style="width: 33%">
+            <!-- the right column contains the explanation for the patch -->
+            <h2 id="expl_header">Explanation</h2>
+        </th>
+    </tr>
+    <tr>
+        <td>
+            <!-- the left column contains the buggy code -->
+            <div id="buggy_code_container">
+                <!-- placeholder Python function highlighted with highlight.js -->
+                <pre><code class="python" id="buggy_code"># Consider the following function and test.
+107     def follow(self, url, callback=None, method='GET', headers=None, body=None,
+108                cookies=None, meta=None, encoding='utf-8', priority=0,
+109                dont_filter=False, errback=None):
+110         # type: (...) -> Request
+111         """
+112         Return a :class:`~.Request` instance to follow a link ``url``.
+113         It accepts the same arguments as ``Request.__init__`` method,
+114         but ``url`` can be a relative URL or a ``scrapy.link.Link`` object,
+115         not only an absolute URL.
+116
+117         :class:`~.TextResponse` provides a :meth:`~.TextResponse.follow`
+118         method which supports selectors in addition to absolute/relative URLs
+119         and Link objects.
+120         """
+121         if isinstance(url, Link):
+122             url = url.url
+123         url = self.urljoin(url)
+124         return Request(url, callback,
+125                        method=method,
+126                        headers=headers,
+127                        body=body,
+128                        cookies=cookies,
+129                        meta=meta,
+130                        encoding=encoding,
+131                        priority=priority,
+132                        dont_filter=dont_filter,
+133                        errback=errback)</code></pre>
+            </div>
+            When running the tests for the project, the following error is reported:
+            <pre><code>____________________ BaseResponseTest.test_follow_None_url _____________________
+    def test_follow_None_url(self):
+        r = self.response_class("http://example.com")
+>       self.assertRaises(ValueError, r.follow, None)
+E       AssertionError: ValueError not raised by follow</code></pre>
+        </td>
+        <td>
+            <!-- the middle column contains the patch -->
+            <div id="patch_container">
+                <!-- placeholder diff file -->
+                <pre><code id="patch" class="language-diff">--- func_def.py
++++ func_def.py
+@@ -107,6 +107,8 @@
+     def follow(self, url, callback=None, method='GET', headers=None, body=None,
+                cookies=None, meta=None, encoding='utf-8', priority=0,
+                dont_filter=False, errback=None):
++    if url is None:
++        raise ValueError("url cannot be None")
+     if isinstance(url, Link):
+         url = url.url
+     url = self.urljoin(url)</code></pre>
+            </div>
+        </td>
+        <td>
+            <!-- the right column contains the explanation for the patch -->
+            <div id="explanation">
+                <!-- now we show each of the three steps until successful repair. -->
+                <!-- step 1 foldable box -->
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_1" class="expl_header" onclick="toggleFold('expl_details_1')" style="background-color: lightgreen;">
+                        <h3>Step 1: The method is not raising a ValueError when the input is None (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_1" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: Given that the test is failing, the method is not raising a ValueError when the input is None.</li>
+                            <li>Prediction:  If I print <code>url</code> at line 121, while given the input and its intended role it should be None, it will be None; that is, <code>url == None</code> will be true.</li>
+                            <li>Experiment: <code>b scrapy/http/response/__init__.py:121 ;; c ;; p url</code></li>
+                            <li>Observation: <code>None</code></li>
+                            <li>Conclusion: The hypothesis is supported.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expl_step">
+                    <!-- the header of the foldable box -->
+                    <div id="expl_header_2" class="expl_header" onclick="toggleFold('expl_details_2')" style="background-color: lightgreen;">
+                        <h3>Step 2: The method is not raising a ValueError when the input is None because the method is not checking for None (⭕)</h3>
+                    </div>
+                    <!-- the content of the foldable box -->
+                    <div id="expl_details_2" class="expl_content" style="display:none">
+                        <p>Details:</p>
+                        <ul>
+                            <li>Hypothesis: The previous hypothesis was supported. I think the method is not raising a ValueError when the input is None because the method is not checking for None.</li>
+                            <li>Prediction: If I add a check for None at line 121, the test will pass.</li>
+                            <li>Experiment: <code>ADD(121, "if url is None: raise ValueError('url cannot be None')") AND RUN</code></li>
+                            <li>Observation: <code>[The failing test now passes.]</code></li>
+                            <li>Conclusion: The hypothesis is supported. <code>&lt;DEBUGGING DONE&gt;</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+<script>hljs.highlightAll();</script>
