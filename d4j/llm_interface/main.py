@@ -6,7 +6,7 @@ import re
 import time
 import sys
 import json
-import requests
+import openai
 
 #import openai
 import tqdm
@@ -20,24 +20,56 @@ import util
 D4J_PROMPT_INFO = './bug_prompt_info.json'
 TEMPERATURE = 0.7
 COMMIT_STATUS = './commit_status.csv'
+MODEL = os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo-1106')
+
+def record_openai_usage(response):
+    usage_path = os.environ.get('AUTOSD_USAGE_PATH')
+    response_usage = getattr(response, 'usage', None)
+    if not usage_path or response_usage is None:
+        return
+
+    prompt_tokens = getattr(response_usage, 'prompt_tokens', 0) or 0
+    completion_tokens = getattr(response_usage, 'completion_tokens', 0) or 0
+    usage_data = {
+        'prompt_tokens': prompt_tokens,
+        'completion_tokens': completion_tokens,
+        'requests': 1,
+        'model': MODEL,
+    }
+
+    if os.path.exists(usage_path):
+        try:
+            with open(usage_path) as f:
+                previous = json.load(f)
+            usage_data['prompt_tokens'] += previous.get('prompt_tokens', 0)
+            usage_data['completion_tokens'] += previous.get('completion_tokens', 0)
+            usage_data['requests'] += previous.get('requests', 0)
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    os.makedirs(os.path.dirname(usage_path), exist_ok=True)
+    with open(usage_path, 'w') as f:
+        json.dump(usage_data, f, indent=2)
 
 def query_chatgpt_002(prompt, end_tokens=['`'], max_tokens=100):
-    URI = 'http://localhost:8031/completions'
-    d = {
-        'prompt': prompt,
-        'max_tokens': max_tokens,
-        'temperature': TEMPERATURE,
-        'end_tokens': end_tokens,
-        'top_p': 1.0,
-    }
-    response = requests.post(URI, data=d)
-    if response.status_code == 200:
-        resp_text = json.loads(response.text)['choices'][0]['text']
-        for delimiter in end_tokens:
-            resp_text = resp_text.split(delimiter)[0]
-        return resp_text
-    if response.status_code != 200:
-        raise ValueError(f'Request failed with error message {response.text}')
+    if not os.environ.get("OPENAI_API_KEY"):
+        raise EnvironmentError(
+            "OPENAI_API_KEY is not set. Export your OpenAI API key before running this script."
+        )
+
+    response = openai.chat.completions.create(
+        messages=[{"role": "user", "content": prompt}],
+        model=MODEL,
+        max_tokens=max_tokens,
+        temperature=TEMPERATURE,
+        top_p=1.0,
+        stop=end_tokens,
+    )
+    record_openai_usage(response)
+    resp_text = response.choices[0].message.content or ''
+    for delimiter in end_tokens:
+        resp_text = resp_text.split(delimiter)[0]
+    return resp_text
 
 def query_human(prompt, end_tokens, max_tokens=100):
     return input('')
@@ -48,10 +80,25 @@ def safe_query_model(prompt, end_tokens=['`'], max_tokens=100):
         try:
             return query_chatgpt_002(prompt, end_tokens, max_tokens)
 
+        except openai.AuthenticationError as e:
+            raise RuntimeError(
+                "OpenAI authentication failed. Check that OPENAI_API_KEY contains a valid API key."
+            ) from e
+        except openai.APIError as e:
+            if getattr(e, "status_code", None) == 401:
+                raise RuntimeError(
+                    "OpenAI authentication failed. Check that OPENAI_API_KEY contains a valid API key."
+                ) from e
+            print('ERR:', e)
+            save_err = e
+            if 'maximum context length' in str(e) or 'Please reduce' in str(e):
+                break
+
+            time.sleep(8)
         except Exception as e:
             print('ERR:', e)
             save_err = e
-            if 'maximum context length' in str(e):
+            if 'maximum context length' in str(e) or 'Please reduce' in str(e):
                 break
 
             time.sleep(8)
@@ -237,8 +284,11 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', type=int, default=0)
     parser.add_argument('--all', type=int, default=0)
     parser.add_argument('--repeats', type=int, default=1)
+    parser.add_argument('--model', type=str, default=MODEL,
+                        help='OpenAI chat model to use. Defaults to OPENAI_MODEL or gpt-3.5-turbo-1106.')
 
     args = parser.parse_args()
+    MODEL = args.model
     assert (args.all != 0) != (args.project is not None), 'Specify a single project, or use the --all command.'
 
     if args.all == 0:
